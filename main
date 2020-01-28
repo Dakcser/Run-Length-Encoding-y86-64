@@ -1,0 +1,69 @@
+main:                   
+
+    rrmovq %r10,%rsi    # Datan alkuperäinen pituus
+    irmovq $0,%rdi      # Datan pakattu pituus
+    irmovq $0,%rax      # Muuttuja johon tallennetaan tehokkuus
+    
+    irmovq $99,%r11     # Apumuuttuja prosenttilaskuun
+    irmovq $1,%rdx      # Apumuuttuja (jolla vähennetään/lisätään 1)
+    irmovq $1,%r14      #laskuri
+    
+    irmovq $1,%rcx      # Muuttuja mihin tallennetaan muistista haettu arvo 1
+    irmovq $1,%rbx      # Muuttuja mihin tallennetaan muistista haettu arvo 2
+    
+    irmovq $8,%r8       # Asetetaan muistin tavun koko
+    irmovq $0x1200,%r9  # Muistin osoite
+    
+    irmovq $0x1000,%rbp   # Pinon alkuosoite rekistereihin
+    irmovq $0x1000,%rsp   # Pinon nykyisen muistipaikan osoite
+    #------ Alustus hoidettu --------
+    
+loop1:
+    mrmovq (%r9),%rcx    # Haetaan symboli muistista
+    
+    loop2:
+        addq %r8,%r9        # Seuraava muisti osoite
+        mrmovq (%r9),%rbx   # Haetaan seuraava symboli muistista
+        subq %rdx,%r10      # Vähennetään otettu symboli pituudesta
+        addq %rdx,%r14      # Lisätään merkkilaskuriin 1
+        
+        subq %rax, %r10     # Tarkistetaan onko kaikki symbolit käyty läpi
+        je loop3            # Hypätään jos symboleita ei ole enään 
+        
+        subq %rcx,%rbx
+        je loop2        # Testaus rbx-rcx == 0, loop loppuu kun ZF=0
+        
+    loop3:                      # Tallennetaan pakattu data
+        subq %rdx,%r14          # Tasataan merkkilaskuri
+        
+        pushq %r14              # Lisätään pinoon symbolien määrä
+        pushq %rcx              # Lisätään pinoon symboli
+        
+        addq %rdx,%rdi
+        addq %rdx,%rdi          # Lisätään kaksi pakattuun pituuteen
+        rrmovq %rdx,%r14        # Nollataan merkkilaskuri
+       
+        subq %rax,%r10
+        jg loop1            
+    jne loop1               # Ollaan loopissa siihen asti että on r10 == 0
+call tehokkuus              # Lasketaan tehokkuus aliohjelmalla, tallennetaan %rax vastaus
+halt                        ##### Ohjelma päättyy #####
+
+.pos 0x400
+tehokkuus:          # Laskee tehokkuua xx%
+rrmovq %rdi,%r8     
+loopOne:            # Kerrotaan pakattu pituus 100
+    addq %r8,%rdi
+    subq %rdx,%r11
+    jne loopOne
+
+loopTwo:            # Jaetaan kerrottu alkuperäisellä pituudella
+    addq %rdx,%rax
+    subq %rsi,%rdi
+    jge loopTwo
+    
+subq %rdx,%rax      # Tasataan jakaus
+irmovq $100,%r11    # Asetetaan 100 muuttujaan että voidaan...
+subq %rax, %r11     #...vähentää lasketusta arvosta
+rrmovq %r11, %rax   # Siirretään haluttu arvo %rax:iin
+ret                 
